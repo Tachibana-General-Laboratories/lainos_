@@ -29,7 +29,7 @@ bootblock
 entryother
 initcode
 initcode.out
-kernel.img
-kernelmemfs
+kernel/kernel
+kernel/kernelmemfs
 mkfs
 .gdbinit
