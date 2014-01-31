@@ -1,15 +1,16 @@
+# buf.h fcntl.h stat.h fs.h file.h ide.c bio.c log.c fs.c file.c sysfile.c exec.c
 OBJS = \
-	bio.o\
+	fs/bio.o\
 	console.o\
-	exec.o\
-	file.o\
-	fs.o\
-	ide.o\
+	fs/exec.o\
+	fs/file.o\
+	fs/fs.o\
+	fs/ide.o\
 	ioapic.o\
 	kalloc.o\
 	kbd.o\
 	lapic.o\
-	log.o\
+	fs/log.o\
 	main.o\
 	mp.o\
 	picirq.o\
@@ -19,7 +20,7 @@ OBJS = \
 	string.o\
 	swtch.o\
 	syscall.o\
-	sysfile.o\
+	fs/sysfile.o\
 	sysproc.o\
 	timer.o\
 	trapasm.o\
@@ -67,6 +68,9 @@ QEMU = $(shell if which qemu > /dev/null; \
 	echo "***" 1>&2; exit 1)
 endif
 
+ROOT = $(shell pwd)
+INC = -I$(ROOT) -I$(ROOT)/fs
+
 CC = $(TOOLPREFIX)gcc
 AS = $(TOOLPREFIX)gas
 LD = $(TOOLPREFIX)ld
@@ -75,6 +79,7 @@ OBJDUMP = $(TOOLPREFIX)objdump
 #CFLAGS = -fno-pic -static -fno-builtin -fno-strict-aliasing -O2 -Wall -MD -ggdb -m32 -Werror -fno-omit-frame-pointer
 CFLAGS = -fno-pic -static -fno-builtin -fno-strict-aliasing -Wall -MD -ggdb -m32 -Werror -fno-omit-frame-pointer
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
+CFLAGS += $(INC)
 ASFLAGS = -m32 -gdwarf-2 -Wa,-divide
 # FreeBSD ld wants ``elf_i386_fbsd''
 LDFLAGS += -m $(shell $(LD) -V | grep elf_i386 2>/dev/null)
@@ -145,7 +150,7 @@ _forktest: forktest.o $(ULIB)
 	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o _forktest forktest.o ulib.o usys.o
 	$(OBJDUMP) -S _forktest > forktest.asm
 
-mkfs: mkfs.c fs.h
+mkfs: mkfs.c fs/fs.h
 	gcc -Werror -Wall -o mkfs mkfs.c
 
 # Prevent deletion of intermediate files, e.g. cat.o, after first build, so
