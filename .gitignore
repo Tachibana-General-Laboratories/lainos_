@@ -16,3 +16,20 @@
 *.exe
 *.out
 *.app
+
+# from xv6
+*~
+_*
+*.d
+*.asm
+*.sym
+*.img
+vectors.S
+bootblock
+entryother
+initcode
+initcode.out
+kernel.img
+kernelmemfs
+mkfs
+.gdbinit
