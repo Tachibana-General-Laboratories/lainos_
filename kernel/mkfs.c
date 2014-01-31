@@ -66,6 +66,8 @@ main(int argc, char *argv[])
   char buf[512];
   struct dinode din;
 
+  char *fname;
+
 
   static_assert(sizeof(int) == 4, "Integers must be 4 bytes!");
 
@@ -118,7 +120,10 @@ main(int argc, char *argv[])
   iappend(rootino, &de, sizeof(de));
 
   for(i = 2; i < argc; i++){
-    assert(index(argv[i], '/') == 0);
+	fname = strrchr(argv[i], '/');
+	if(!fname) fname = argv[i];
+
+    //assert(index(argv[i], '/') == 0);
 
     if((fd = open(argv[i], 0)) < 0){
       perror(argv[i]);
@@ -129,14 +134,18 @@ main(int argc, char *argv[])
     // The binaries are named _rm, _cat, etc. to keep the
     // build operating system from trying to execute them
     // in place of system binaries like rm and cat.
-    if(argv[i][0] == '_')
-      ++argv[i];
+    if(*fname == '/')
+      ++fname;
+    if(*fname == '_')
+      ++fname;
+
+	printf("%s -> %s\n", argv[i], fname);
 
     inum = ialloc(T_FILE);
 
     bzero(&de, sizeof(de));
     de.inum = xshort(inum);
-    strncpy(de.name, argv[i], DIRSIZ);
+    strncpy(de.name, fname, DIRSIZ);
     iappend(rootino, &de, sizeof(de));
 
     while((cc = read(fd, buf, sizeof(buf))) > 0)

@@ -75,7 +75,8 @@ ROOT = $(shell pwd)
 INC = -I$(ROOT) -I$(ROOT)/include \
 	  -I$(ROOT)/fs -I$(ROOT)/hardware \
 	  -I$(ROOT)/syscall -I$(ROOT)/proc \
-	  -I$(ROOT)/lock
+	  -I$(ROOT)/lock \
+	  -I$(ROOT)/../userspace/lib/ulib
 
 CC = $(TOOLPREFIX)gcc
 AS = $(TOOLPREFIX)gas
@@ -144,18 +145,19 @@ tags: $(OBJS) entryother.S _init
 syscall/vectors.S: syscall/vectors.pl
 	perl syscall/vectors.pl > syscall/vectors.S
 
-ULIB = ulib.o usys.o printf.o umalloc.o
+ULIB = ../userspace/lib/ulib/ulib.o ../userspace/lib/ulib/usys.o ../userspace/lib/ulib/printf.o ../userspace/lib/ulib/umalloc.o
 
 _%: %.o $(ULIB)
 	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $@ $^
 	$(OBJDUMP) -S $@ > $*.asm
 	$(OBJDUMP) -t $@ | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $*.sym
 
-_forktest: forktest.o $(ULIB)
+../userspace/tests/_forktest: ../userspace/tests/forktest.o $(ULIB)
 	# forktest has less library code linked in - needs to be small
 	# in order to be able to max out the proc table.
-	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o _forktest forktest.o ulib.o usys.o
-	$(OBJDUMP) -S _forktest > forktest.asm
+	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o ../userspace/tests/_forktest \
+		../userspace/tests/forktest.o ../userspace/lib/ulib/ulib.o ../userspace/lib/ulib/usys.o
+	$(OBJDUMP) -S ../userspace/tests/_forktest > ../userspace/tests/forktest.asm
 
 mkfs: mkfs.c fs/fs.h
 	gcc -Werror -Wall -o mkfs mkfs.c
@@ -167,21 +169,21 @@ mkfs: mkfs.c fs/fs.h
 .PRECIOUS: %.o
 
 UPROGS=\
-	_cat\
-	_echo\
-	_forktest\
-	_grep\
-	_init\
-	_kill\
-	_ln\
-	_ls\
-	_mkdir\
-	_rm\
-	_sh\
-	_stressfs\
-	_usertests\
-	_wc\
-	_zombie\
+	../userspace/core/_cat\
+	../userspace/core/_echo\
+	../userspace/tests/_forktest\
+	../userspace/core/_grep\
+	../userspace/core/_init\
+	../userspace/core/_kill\
+	../userspace/core/_ln\
+	../userspace/core/_ls\
+	../userspace/core/_mkdir\
+	../userspace/core/_rm\
+	../userspace/core/_sh\
+	../userspace/tests/_stressfs\
+	../userspace/tests/_usertests\
+	../userspace/core/_wc\
+	../userspace/core/_zombie\
 
 fs.img: mkfs README $(UPROGS)
 	./mkfs fs.img README $(UPROGS)
@@ -219,7 +221,7 @@ QEMUGDB = $(shell if $(QEMU) -help | grep -q '^-gdb'; \
 	then echo "-gdb tcp::$(GDBPORT)"; \
 	else echo "-s -p $(GDBPORT)"; fi)
 ifndef CPUS
-CPUS := 2
+CPUS := 1
 endif
 QEMUOPTS = -hdb fs.img xv6.img -smp $(CPUS) -m 512 $(QEMUEXTRA)
 
