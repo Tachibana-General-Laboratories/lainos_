@@ -1,6 +1,7 @@
 # buf.h fcntl.h stat.h fs.h file.h ide.c bio.c log.c fs.c file.c sysfile.c exec.c
 # mp.h mp.c lapic.c ioapic.c picirq.c kbd.h kbd.c console.c timer.c uart.c
 # traps.h vectors.pl trapasm.S trap.c syscall.h syscall.c sysproc.c
+# vm.c proc.h proc.c swtch.S kalloc.c
 OBJS = \
 	fs/bio.o\
 	hardware/console.o\
@@ -9,7 +10,7 @@ OBJS = \
 	fs/fs.o\
 	fs/ide.o\
 	hardware/ioapic.o\
-	kalloc.o\
+	proc/kalloc.o\
 	hardware/kbd.o\
 	hardware/lapic.o\
 	fs/log.o\
@@ -17,10 +18,10 @@ OBJS = \
 	hardware/mp.o\
 	hardware/picirq.o\
 	pipe.o\
-	proc.o\
+	proc/proc.o\
 	spinlock.o\
 	string.o\
-	swtch.o\
+	proc/swtch.o\
 	syscall/syscall.o\
 	fs/sysfile.o\
 	syscall/sysproc.o\
@@ -29,7 +30,7 @@ OBJS = \
 	syscall/trap.o\
 	hardware/uart.o\
 	syscall/vectors.o\
-	vm.o\
+	proc/vm.o\
 
 # Cross-compiling (e.g., on Mac OS X)
 #TOOLPREFIX = i386-jos-elf-
@@ -71,7 +72,7 @@ QEMU = $(shell if which qemu > /dev/null; \
 endif
 
 ROOT = $(shell pwd)
-INC = -I$(ROOT) -I$(ROOT)/fs -I$(ROOT)/hardware -I$(ROOT)/syscall
+INC = -I$(ROOT) -I$(ROOT)/fs -I$(ROOT)/hardware -I$(ROOT)/syscall -I$(ROOT)/proc
 
 CC = $(TOOLPREFIX)gcc
 AS = $(TOOLPREFIX)gas
@@ -185,8 +186,8 @@ fs.img: mkfs README $(UPROGS)
 -include *.d
 
 clean: 
-	rm -f *.tex *.dvi *.idx *.aux *.log *.ind *.ilg \
-	*.o *.d *.asm *.sym syscall/vectors.S bootblock entryother \
+	rm -f */*.tex */*.dvi */*.idx */*.aux */*.log */*.ind */*.ilg \
+	*/*.o */*.d */*.asm */*.sym syscall/vectors.S bootblock entryother \
 	initcode initcode.out kernel xv6.img fs.img kernelmemfs mkfs \
 	.gdbinit \
 	$(UPROGS)
