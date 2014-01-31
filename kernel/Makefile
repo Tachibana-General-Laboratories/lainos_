@@ -1,19 +1,20 @@
 # buf.h fcntl.h stat.h fs.h file.h ide.c bio.c log.c fs.c file.c sysfile.c exec.c
+# mp.h mp.c lapic.c ioapic.c picirq.c kbd.h kbd.c console.c timer.c uart.c
 OBJS = \
 	fs/bio.o\
-	console.o\
+	hardware/console.o\
 	fs/exec.o\
 	fs/file.o\
 	fs/fs.o\
 	fs/ide.o\
-	ioapic.o\
+	hardware/ioapic.o\
 	kalloc.o\
-	kbd.o\
-	lapic.o\
+	hardware/kbd.o\
+	hardware/lapic.o\
 	fs/log.o\
 	main.o\
-	mp.o\
-	picirq.o\
+	hardware/mp.o\
+	hardware/picirq.o\
 	pipe.o\
 	proc.o\
 	spinlock.o\
@@ -22,10 +23,10 @@ OBJS = \
 	syscall.o\
 	fs/sysfile.o\
 	sysproc.o\
-	timer.o\
+	hardware/timer.o\
 	trapasm.o\
 	trap.o\
-	uart.o\
+	hardware/uart.o\
 	vectors.o\
 	vm.o\
 
