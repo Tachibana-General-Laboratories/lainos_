@@ -72,7 +72,7 @@ QEMU = $(shell if which qemu > /dev/null; \
 endif
 
 ROOT = $(shell pwd)
-INC = -I$(ROOT) -I$(ROOT)/fs -I$(ROOT)/hardware -I$(ROOT)/syscall -I$(ROOT)/proc
+INC = -I$(ROOT) -I$(ROOT)/include -I$(ROOT)/fs -I$(ROOT)/hardware -I$(ROOT)/syscall -I$(ROOT)/proc
 
 CC = $(TOOLPREFIX)gcc
 AS = $(TOOLPREFIX)gas
