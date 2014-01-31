@@ -19,7 +19,7 @@ OBJS = \
 	hardware/picirq.o\
 	pipe.o\
 	proc/proc.o\
-	spinlock.o\
+	lock/spinlock.o\
 	string.o\
 	proc/swtch.o\
 	syscall/syscall.o\
@@ -72,7 +72,10 @@ QEMU = $(shell if which qemu > /dev/null; \
 endif
 
 ROOT = $(shell pwd)
-INC = -I$(ROOT) -I$(ROOT)/include -I$(ROOT)/fs -I$(ROOT)/hardware -I$(ROOT)/syscall -I$(ROOT)/proc
+INC = -I$(ROOT) -I$(ROOT)/include \
+	  -I$(ROOT)/fs -I$(ROOT)/hardware \
+	  -I$(ROOT)/syscall -I$(ROOT)/proc \
+	  -I$(ROOT)/lock
 
 CC = $(TOOLPREFIX)gcc
 AS = $(TOOLPREFIX)gas
