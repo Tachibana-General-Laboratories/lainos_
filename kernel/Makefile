@@ -188,6 +188,7 @@ fs.img: mkfs README $(UPROGS)
 clean: 
 	rm -f */*.tex */*.dvi */*.idx */*.aux */*.log */*.ind */*.ilg \
 	*/*.o */*.d */*.asm */*.sym syscall/vectors.S bootblock entryother \
+	*.tex *.dvi *.idx *.aux *.log *.ind *.ilg *.o *.d *.asm *.sym \
 	initcode initcode.out kernel xv6.img fs.img kernelmemfs mkfs \
 	.gdbinit \
 	$(UPROGS)
