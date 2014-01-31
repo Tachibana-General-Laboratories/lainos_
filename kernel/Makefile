@@ -1,5 +1,6 @@
 # buf.h fcntl.h stat.h fs.h file.h ide.c bio.c log.c fs.c file.c sysfile.c exec.c
 # mp.h mp.c lapic.c ioapic.c picirq.c kbd.h kbd.c console.c timer.c uart.c
+# traps.h vectors.pl trapasm.S trap.c syscall.h syscall.c sysproc.c
 OBJS = \
 	fs/bio.o\
 	hardware/console.o\
@@ -20,14 +21,14 @@ OBJS = \
 	spinlock.o\
 	string.o\
 	swtch.o\
-	syscall.o\
+	syscall/syscall.o\
 	fs/sysfile.o\
-	sysproc.o\
+	syscall/sysproc.o\
 	hardware/timer.o\
-	trapasm.o\
-	trap.o\
+	syscall/trapasm.o\
+	syscall/trap.o\
 	hardware/uart.o\
-	vectors.o\
+	syscall/vectors.o\
 	vm.o\
 
 # Cross-compiling (e.g., on Mac OS X)
@@ -70,7 +71,7 @@ QEMU = $(shell if which qemu > /dev/null; \
 endif
 
 ROOT = $(shell pwd)
-INC = -I$(ROOT) -I$(ROOT)/fs
+INC = -I$(ROOT) -I$(ROOT)/fs -I$(ROOT)/hardware -I$(ROOT)/syscall
 
 CC = $(TOOLPREFIX)gcc
 AS = $(TOOLPREFIX)gas
@@ -82,6 +83,7 @@ CFLAGS = -fno-pic -static -fno-builtin -fno-strict-aliasing -Wall -MD -ggdb -m32
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 CFLAGS += $(INC)
 ASFLAGS = -m32 -gdwarf-2 -Wa,-divide
+ASFLAGS += $(INC)
 # FreeBSD ld wants ``elf_i386_fbsd''
 LDFLAGS += -m $(shell $(LD) -V | grep elf_i386 2>/dev/null)
 
@@ -135,8 +137,8 @@ kernelmemfs: $(MEMFSOBJS) entry.o entryother initcode fs.img
 tags: $(OBJS) entryother.S _init
 	etags *.S *.c
 
-vectors.S: vectors.pl
-	perl vectors.pl > vectors.S
+syscall/vectors.S: syscall/vectors.pl
+	perl syscall/vectors.pl > syscall/vectors.S
 
 ULIB = ulib.o usys.o printf.o umalloc.o
 
@@ -184,7 +186,7 @@ fs.img: mkfs README $(UPROGS)
 
 clean: 
 	rm -f *.tex *.dvi *.idx *.aux *.log *.ind *.ilg \
-	*.o *.d *.asm *.sym vectors.S bootblock entryother \
+	*.o *.d *.asm *.sym syscall/vectors.S bootblock entryother \
 	initcode initcode.out kernel xv6.img fs.img kernelmemfs mkfs \
 	.gdbinit \
 	$(UPROGS)
