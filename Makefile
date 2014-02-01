@@ -79,6 +79,9 @@ userspace/tests/_forktest: userspace/tests/forktest.o $(ULIB)
 mkfs: mkfs.c kernel/fs/fs.h
 	gcc -Ikernel -Werror -Wall -o mkfs mkfs.c
 
+mkfs2: mkfs2.c kernel/fs/fs.h
+	gcc -Ikernel -Werror -Wall -o mkfs2 mkfs2.c
+
 # Prevent deletion of intermediate files, e.g. cat.o, after first build, so
 # that disk image changes after first build are persistent until clean.  More
 # details:
@@ -102,8 +105,11 @@ UPROGS=\
 	userspace/core/_wc\
 	userspace/core/_zombie\
 
-fs.img: mkfs README.md $(UPROGS)
-	./mkfs fs.img README.md $(UPROGS)
+fs.img: mkfs2 README.md $(UPROGS)
+	mkdir -p fs
+	cp README.md fs
+	cp $(UPROGS) fs
+	./mkfs2 fs.img fs
 
 -include *.d
 
@@ -116,7 +122,7 @@ clean:
 	rm -f */*.tex */*.dvi */*.idx */*.aux */*.log */*.ind */*.ilg \
 	*/*.o */*.d */*.asm */*.sym syscall/vectors.S bootblock entryother \
 	*.tex *.dvi *.idx *.aux *.log *.ind *.ilg *.o *.d *.asm *.sym \
-	initcode initcode.out xv6.img fs.img kernelmemfs mkfs \
+	initcode initcode.out xv6.img fs.img kernelmemfs mkfs mkfs2 \
 	.gdbinit \
 	$(UPROGS)
 

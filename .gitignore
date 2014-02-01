@@ -32,4 +32,6 @@ initcode.out
 kernel/kernel
 kernel/kernelmemfs
 mkfs
+mkfs2
 .gdbinit
+fs
