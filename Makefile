@@ -2,15 +2,15 @@
 #TOOLPREFIX = i386-jos-elf-
 
 # Using native tools (e.g., on X86 Linux)
-#TOOLPREFIX = 
+#TOOLPREFIX =
 
 # Try to infer the correct TOOLPREFIX if not set
 ifndef TOOLPREFIX
-$(error TOOLPREFIX is not set)
+$(warning TOOLPREFIX environment variable is not set. Compilation may fail.)
 endif
 
 # If the makefile can't find QEMU, specify its path here
-#QEMU = 
+#QEMU =
 
 # Try to infer the correct QEMU
 ifndef QEMU
@@ -113,7 +113,7 @@ fs.img: mkfs2 README.md $(UPROGS)
 
 -include *.d
 
-clean: 
+clean:
 	$(MAKE) -C kernel clean
 	find -name "*.d" -delete
 	find -name "*.o" -delete
@@ -173,4 +173,4 @@ qemu-nox-gdb: fs.img xv6.img .gdbinit
 	@echo "*** Now run 'gdb'." 1>&2
 	$(QEMU) -nographic $(QEMUOPTS) -S $(QEMUGDB)
 
-.PHONY: dist-test dist 
+.PHONY: dist-test dist
