@@ -102,10 +102,10 @@ UPROGS=\
 	userspace/core/_mkdir\
 	userspace/core/_rm\
 	userspace/core/_sh\
+	userspace/core/_wc\
 	userspace/tests/_stressfs\
 	userspace/tests/_usertests\
-	userspace/core/_wc\
-	userspace/core/_zombie\
+	userspace/tests/_zombie\
 
 fs.img: mkfs2 README.md $(UPROGS)
 	mkdir -p fs
