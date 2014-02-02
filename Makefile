@@ -6,7 +6,7 @@
 
 # Try to infer the correct TOOLPREFIX if not set
 ifndef TOOLPREFIX
-$(error TOOLPREFIX is not set)
+$(warning TOOLPREFIX environment variable is not set. Compilation may fail.)
 endif
 
 # If the makefile can't find QEMU, specify its path here
