@@ -12,6 +12,11 @@ struct {
   struct proc proc[NPROC];
 } ptable;
 
+struct {
+  struct spinlock lock;
+  struct shared shared[NSHARED];
+} sharedtable;
+
 static struct proc *initproc;
 
 int nextpid = 1;
@@ -122,6 +127,50 @@ growproc(int n)
   return 0;
 }
 
+void
+sharedinit()
+{
+  initlock(&sharedtable.lock, "shared");
+}
+
+struct shared *
+sharedalloc()
+{
+  int i;
+  void *mem;
+  struct shared *sh;
+
+  acquire(&sharedtable.lock);
+  for (i = 0; i < NSHARED; i++) {
+    if (sharedtable.shared[i].refcount == 0) {
+      // found a free one
+      break;
+    }
+  }
+
+  // no free shared records left
+  if (i == NSHARED) {
+    release(&sharedtable.lock);
+    return 0;
+  }
+
+  mem = kalloc();
+  if (!mem) {
+    release(&sharedtable.lock);
+    return 0;
+  }
+  memset(mem, 0, PGSIZE);
+
+  sh = &sharedtable.shared[i];
+  sh->refcount = 1;
+  sh->page = mem;
+  release(&sharedtable.lock);
+
+  return sh;
+}
+
+extern void mappages(pde_t *pgdir, void *va, uint size, uint pa, int perm);
+
 // Create a new process copying p as the parent.
 // Sets up stack to return as if from system call.
 // Caller must set state of returned proc to RUNNABLE.
@@ -153,7 +202,16 @@ fork(void)
     if(proc->ofile[i])
       np->ofile[i] = filedup(proc->ofile[i]);
   np->cwd = idup(proc->cwd);
- 
+
+  // shared mem
+  if (proc->shared) {
+    acquire(&sharedtable.lock);
+    proc->shared->refcount++;
+    mappages(np->pgdir, (char *)SHARED_V, PGSIZE, v2p(proc->shared->page), PTE_W|PTE_U);
+    np->shared = proc->shared;
+    release(&sharedtable.lock);
+  }
+
   pid = np->pid;
   np->state = RUNNABLE;
   safestrcpy(np->name, proc->name, sizeof(proc->name));
@@ -230,6 +288,15 @@ wait(void)
         p->parent = 0;
         p->name[0] = 0;
         p->killed = 0;
+        if (p->shared) {
+          acquire(&sharedtable.lock);
+          p->shared->refcount--;
+          if (p->shared->refcount == 0) {
+            kfree(p->shared->page);
+          }
+          release(&sharedtable.lock);
+          p->shared = 0;
+        }
         release(&ptable.lock);
         return pid;
       }
@@ -258,6 +325,7 @@ void
 scheduler(void)
 {
   struct proc *p;
+  int ran;
 
   for(;;){
     // Enable interrupts on this processor.
@@ -265,13 +333,14 @@ scheduler(void)
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    for(ran = 0, p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE)
         continue;
 
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
+	  ran = 1;
       proc = p;
       switchuvm(p);
       p->state = RUNNING;
@@ -283,6 +352,10 @@ scheduler(void)
       proc = 0;
     }
     release(&ptable.lock);
+
+    if (ran == 0) {
+      halt();
+    }
 
   }
 }

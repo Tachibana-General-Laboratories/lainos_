@@ -24,6 +24,7 @@ main(void)
   seginit();       // set up segments
   cprintf("\ncpu%d: starting xv6\n\n", cpu->id);
   picinit();       // interrupt controller
+  sharedinit();    // shared memory records
   ioapicinit();    // another interrupt controller
   consoleinit();   // I/O devices & their interrupts
   uartinit();      // serial port
