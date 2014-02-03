@@ -76,8 +76,8 @@ mkfs(int nblocks, int nlog, int size) {
 	sb.ninodes = xint(ninodes);
 	sb.nlog = xint(nlog);
 
-	bitblocks = size / (512 * 8) + 1;
-	usedblocks = ninodes / IPB + 3 + bitblocks;
+	bitblocks = size / (512 * 8) + DEV_offset;
+	usedblocks = ninodes / IPB + 2 + DEV_offset + bitblocks;
 	freeblock = usedblocks;
 
 	printf("used %d (bit %d ninode %zu) free %u log %u total %d\n", usedblocks,
@@ -91,7 +91,7 @@ mkfs(int nblocks, int nlog, int size) {
 
 	memset(buf, 0, sizeof(buf));
 	memmove(buf, &sb, sizeof(sb));
-	wsect(1, buf);
+	wsect(DEV_offset, buf);
 }
 
 int
@@ -270,7 +270,7 @@ wsect(uint sec, void *buf) {
 
 uint
 i2b(uint inum) {
-	return (inum / IPB) + 2;
+	return (inum / IPB) + 1 + DEV_offset;
 }
 
 void
@@ -337,8 +337,8 @@ balloc(int used) {
 		buf[i / 8] = buf[i / 8] | (0x1 << (i % 8));
 	}
 
-	printf("balloc: write bitmap block at sector %zu\n", ninodes / IPB + 3);
-	wsect(ninodes / IPB + 3, buf);
+	printf("balloc: write bitmap block at sector %zu\n", ninodes / IPB + 2 + DEV_offset);
+	wsect(ninodes / IPB + 2 + DEV_offset, buf);
 }
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
