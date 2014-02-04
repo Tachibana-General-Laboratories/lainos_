@@ -117,7 +117,8 @@ int             wait(void);
 void            wakeup(void*);
 void            yield(void);
 void            sharedinit(void);
-struct shared * sharedalloc(void);
+struct shared * sharedalloc(int);
+struct shared * sharedbyid(int);
 
 // swtch.S
 void            swtch(struct context**, struct context*);

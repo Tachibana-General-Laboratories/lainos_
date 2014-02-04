@@ -1604,7 +1604,7 @@ sharedtest()
   char *sh;
   printf(1, "shared test\n");
 
-  sh = (char *)shared();
+  sh = (char *)shared(555);
   if (!sh) {
     printf(2, "shared: fail\n");
     exit();

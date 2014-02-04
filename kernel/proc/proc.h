@@ -59,6 +59,7 @@ enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
 struct shared {
   int refcount;
+  int id;
   void *page;
 };
 

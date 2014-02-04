@@ -134,7 +134,7 @@ sharedinit()
 }
 
 struct shared *
-sharedalloc()
+sharedalloc(int id)
 {
   int i;
   void *mem;
@@ -162,8 +162,27 @@ sharedalloc()
   memset(mem, 0, PGSIZE);
 
   sh = &sharedtable.shared[i];
+  sh->id = id;
   sh->refcount = 1;
   sh->page = mem;
+  release(&sharedtable.lock);
+
+  return sh;
+}
+
+struct shared *
+sharedbyid(int id)
+{
+  int i;
+  struct shared *sh = 0;
+
+  acquire(&sharedtable.lock);
+  for (i = 0; i < NSHARED; i++) {
+    if (sharedtable.shared[i].refcount != 0 && sharedtable.shared[i].id == id) {
+      sh = &sharedtable.shared[i];
+    }
+  }
+  sh->refcount++;
   release(&sharedtable.lock);
 
   return sh;
