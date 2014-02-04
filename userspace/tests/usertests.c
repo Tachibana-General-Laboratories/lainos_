@@ -1597,6 +1597,48 @@ fsfull()
   printf(1, "fsfull test finished\n");
 }
 
+void
+sharedtest()
+{
+  int i;
+  char *sh;
+  printf(1, "shared test\n");
+
+  sh = (char *)shared(555);
+  if (!sh) {
+    printf(2, "shared: fail\n");
+    exit();
+  }
+
+  if (fork() == 0) {
+    // this is the child: check the memory is virgin and then write to it
+    int i;
+    for (i = 0; i < 4096; i++) {
+      if (sh[i] != 0) {
+        printf(2, "shared: memory not zeros\n");
+        exit();
+      }
+    }
+    strcpy(sh, "hello world");
+    exit();
+  } else {
+    //int pid;
+    while (i < 1000000) {
+      if (strcmp(sh, "hello world") == 0) {
+        printf(2, "shared ok after %d checks\n", i);
+        break;
+      }
+      i++;
+    }
+    if (i == 1000000) {
+      printf(2, "shared: not ok after %d checks\n", i);
+      exit();
+    }
+
+    /*pid =*/ wait();
+  }
+}
+
 unsigned long randstate = 1;
 unsigned int
 rand()
@@ -1605,10 +1647,55 @@ rand()
   return randstate;
 }
 
+#define TEST(t) if (shouldrun( "" #t )) t()
+
+int nwanted;
+char **wanted;
+int all;
+
+int
+shouldrun(char *tname)
+{
+  int i;
+
+  if (all) return 1;
+  for (i = 0; i < nwanted; i++) {
+    if (strcmp(wanted[i], tname) == 0) {
+      return 1;
+               }
+  }
+       return 0;
+}
+
 int
 main(int argc, char *argv[])
 {
+  if (argc == 1) {
+    all = 1;
+  } else {
+    nwanted = argc-1;
+    wanted = argv+1;
+  }
+
   printf(1, "usertests starting\n");
+
+  TEST(bigargtest);
+  TEST(bigwrite);
+  TEST(bsstest);
+  TEST(sbrktest);
+  TEST(validatetest);
+
+  TEST(opentest);
+  TEST(writetest);
+  TEST(writetest1);
+  TEST(createtest);
+
+  TEST(mem);
+  TEST(pipe1);
+  TEST(preempt);
+  TEST(exitwait);
+  TEST(sharedtest);
+  TEST(exectest);
 
   if(open("usertests.ran", 0) >= 0){
     printf(1, "already ran user tests -- rebuild fs.img\n");
@@ -1616,40 +1703,21 @@ main(int argc, char *argv[])
   }
   close(open("usertests.ran", O_CREATE));
 
-  bigargtest();
-  bigwrite();
-  bigargtest();
-  bsstest();
-  sbrktest();
-  validatetest();
-
-  opentest();
-  writetest();
-  writetest1();
-  createtest();
-
-  mem();
-  pipe1();
-  preempt();
-  exitwait();
-
-  rmdot();
-  fourteen();
-  bigfile();
-  subdir();
-  concreate();
-  linkunlink();
-  linktest();
-  unlinkread();
-  createdelete();
-  twofiles();
-  sharedfd();
-  dirfile();
-  iref();
-  forktest();
-  bigdir(); // slow
-
-  exectest();
+  TEST(rmdot);
+  TEST(fourteen);
+  TEST(bigfile);
+  TEST(subdir);
+  TEST(concreate);
+  TEST(linkunlink);
+  TEST(linktest);
+  TEST(unlinkread);
+  TEST(createdelete);
+  TEST(twofiles);
+  TEST(sharedfd);
+  TEST(dirfile);
+  TEST(iref);
+  TEST(forktest);
+  TEST(bigdir); // slow
 
   exit();
 }

@@ -51,6 +51,18 @@ struct context {
 
 enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
+// The virtual address where shared memory appears, if requested
+#define SHARED_V 0x70000000
+
+// the maximum number of shared pages in the system
+#define NSHARED 10
+
+struct shared {
+  int refcount;
+  int id;
+  void *page;
+};
+
 // Per-process state
 struct proc {
   uint sz;                     // Size of process memory (bytes)
@@ -65,6 +77,7 @@ struct proc {
   int killed;                  // If non-zero, have been killed
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
+  struct shared *shared;       // Shared memory record (0 -> none)
   char name[16];               // Process name (debugging)
 };
 
@@ -73,3 +86,4 @@ struct proc {
 //   original data and bss
 //   fixed-size stack
 //   expandable heap
+//   (optionally) fixed-sized shared mem segment, 1 page @ 0x7000000

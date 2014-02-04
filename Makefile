@@ -92,17 +92,22 @@ mkfs2: mkfs2.c kernel/fs/fs.h
 
 UPROGS=\
 	userspace/core/_cat\
+	userspace/tests/_crash\
 	userspace/core/_echo\
+	userspace/tests/_factor\
 	userspace/tests/_forktest\
 	userspace/core/_grep\
+	userspace/tests/_hello\
 	userspace/core/_init\
 	userspace/core/_kill\
 	userspace/core/_ln\
 	userspace/core/_ls\
 	userspace/core/_mkdir\
+	userspace/tests/_null\
 	userspace/core/_rm\
 	userspace/core/_sh\
 	userspace/core/_wc\
+	userspace/tests/_share\
 	userspace/tests/_stressfs\
 	userspace/tests/_usertests\
 	userspace/tests/_zombie\

@@ -88,3 +88,55 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+extern void mappages(pde_t *pgdir, void *va, uint size, uint pa, int perm);
+
+// arrange for this process to have a shared memory page
+// that will be shared with all children
+int
+sys_shared(void)
+{
+  int id;
+  struct shared *sh;
+
+  if(argint(0, &id) < 0)
+    return -1;
+
+  // if there's already a shared page, return now
+  if (proc->shared) {
+    return SHARED_V;
+  }
+
+  sh = sharedalloc(id);
+  if (sh) {
+    proc->shared = sh;
+    mappages(proc->pgdir, (char *)SHARED_V, PGSIZE, v2p(sh->page), PTE_W|PTE_U);
+    return SHARED_V;
+  } else {
+    return 0;
+  }
+}
+
+int
+sys_shared_attach(void)
+{
+  int id;
+  struct shared *sh;
+
+  if(argint(0, &id) < 0)
+    return -1;
+
+  // if there's already a shared page, return now
+  if (proc->shared) {
+    return SHARED_V;
+  }
+
+  sh = sharedbyid(id);
+  if (sh) {
+    proc->shared = sh;
+    mappages(proc->pgdir, (char *)SHARED_V, PGSIZE, v2p(sh->page), PTE_W|PTE_U);
+    return SHARED_V;
+  } else {
+    return 0;
+  }
+}
