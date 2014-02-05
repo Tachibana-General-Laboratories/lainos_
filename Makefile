@@ -55,11 +55,18 @@ xv6.img: kernel/bootblock kernel/kernel fs.img
 	dd if=kernel/bootblock of=xv6.img conv=notrunc
 	dd if=kernel/kernel of=xv6.img seek=1 conv=notrunc
 
+xv6memfs.img: fs.img kernel/bootblock kernel/kernelmemfs
+	dd if=/dev/zero of=xv6memfs.img count=10000
+	dd if=kernel/bootblock of=xv6memfs.img conv=notrunc
+	dd if=kernel/kernelmemfs of=xv6memfs.img seek=1 conv=notrunc
+
 kernel/bootblock:
 	$(MAKE) -C kernel bootblock
 
 kernel/kernel:
 	$(MAKE) -C kernel kernel
+kernel/kernelmemfs:
+	$(MAKE) -C kernel kernelmemfs
 
 tags: $(OBJS) entryother.S _init
 	etags *.S *.c
@@ -158,16 +165,16 @@ QEMUGDB = $(shell if $(QEMU) -help | grep -q '^-gdb'; \
 ifndef CPUS
 CPUS := 1
 endif
-QEMUOPTS = -hdb fs.img xv6.img -smp $(CPUS) -m 512 $(QEMUEXTRA)
+QEMUOPTS = -serial mon:stdio -smp $(CPUS) -m 512 $(QEMUEXTRA)
 
 qemu: fs.img xv6.img
-	$(QEMU) -serial mon:stdio $(QEMUOPTS)
+	$(QEMU) -hdb fs.img xv6.img $(QEMUOPTS)
 
 qemu-memfs: xv6memfs.img
-	$(QEMU) xv6memfs.img -smp $(CPUS)
+	$(QEMU) xv6memfs.img $(QEMUOPTS)
 
 qemu-nox: fs.img xv6.img
-	$(QEMU) -nographic $(QEMUOPTS)
+	$(QEMU) -hdb fs.img xv6.img -nographic $(QEMUOPTS)
 
 .gdbinit: .gdbinit.tmpl
 	sed "s/localhost:1234/localhost:$(GDBPORT)/" < $^ > $@

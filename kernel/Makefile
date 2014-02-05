@@ -53,6 +53,15 @@ kernel: $(OBJS) entry.o entryother initcode kernel.ld
 	$(OBJDUMP) -S kernel > kernel.asm
 	$(OBJDUMP) -t kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > kernel.sym
 
+MEMFSOBJS = $(filter-out fs/ide.o,$(OBJS)) memide.o
+kernelmemfs: $(MEMFSOBJS) entry.o entryother initcode kernel.ld ../fs.img
+	rm -f fs.img
+	cp ../fs.img fs.img
+	$(LD) $(LDFLAGS) -T kernel.ld -o kernelmemfs entry.o $(MEMFSOBJS) -b binary initcode entryother fs.img
+	rm -f fs.img
+	$(OBJDUMP) -S kernelmemfs > kernelmemfs.asm
+	$(OBJDUMP) -t kernelmemfs | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > kernelmemfs.sym
+
 tags: $(OBJS) entryother.S _init
 	etags *.S *.c
 
