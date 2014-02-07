@@ -19,9 +19,327 @@
 #include "buf.h"
 #include "fs.h"
 #include "file.h"
+#include "fcntl.h"
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
 static void itrunc(struct inode*);
+
+
+
+void            readsb(int dev, struct superblock *sb);
+void            iinit(void);
+void            ilock(struct inode*);
+void            iunlock(struct inode*);
+void            iunlockput(struct inode*);
+struct inode*   namei(char*);
+int             readi(struct inode*, char*, uint, uint);
+
+struct inode*   idup(struct inode*);
+
+static int             dirlink(struct inode*, char*, uint);
+static struct inode*   dirlookup(struct inode*, char*, uint*);
+static struct inode*   ialloc(uint, short);
+static void            iput(struct inode*);
+static void            iupdate(struct inode*);
+static int             namecmp(const char*, const char*);
+static struct inode*   nameiparent(char*, char*);
+static void            stati(struct inode*, struct stat*);
+static int             writei(struct inode*, char*, uint, uint);
+
+void
+sfs_closei(struct inode *ip)
+{
+  begin_trans();
+  iput(ip);
+  commit_trans();
+}
+
+
+void
+sfs_stati(struct inode *ip, struct stat *st)
+{
+  ilock(ip);
+  stati(ip, st);
+  iunlock(ip);
+}
+
+int
+sfs_readi(struct inode *ip, char *addr, int off, int n)
+{
+  int r;
+  ilock(ip);
+  r = readi(ip, addr, off, n);
+  iunlock(ip);
+  return r;
+}
+
+int
+sfs_writei(struct inode *ip, char *addr, int off, int n)
+{
+  // write a few blocks at a time to avoid exceeding
+  // the maximum log transaction size, including
+  // i-node, indirect block, allocation blocks,
+  // and 2 blocks of slop for non-aligned writes.
+  // this really belongs lower down, since writei()
+  // might be writing a device like the console.
+  int r;
+  int max = ((LOGSIZE-1-1-2) / 2) * 512;
+  int i = 0;
+  while(i < n){
+    int n1 = n - i;
+    if(n1 > max)
+      n1 = max;
+
+    begin_trans();
+    ilock(ip);
+    if ((r = writei(ip, addr + i, off, n1)) > 0)
+      off += r;
+    iunlock(ip);
+    commit_trans();
+
+    if(r < 0)
+      break;
+    if(r != n1)
+      panic("short filewrite");
+    i += r;
+  }
+  return i == n ? n : -1;
+}
+
+int
+sfs_linki(char *new, char *old)
+{
+  char name[DIRSIZ];
+  struct inode *dp, *ip;
+
+  if(argstr(0, &old) < 0 || argstr(1, &new) < 0)
+    return -1;
+  if((ip = namei(old)) == 0)
+    return -1;
+
+  begin_trans();
+
+  ilock(ip);
+  if(ip->type == T_DIR){
+    iunlockput(ip);
+    commit_trans();
+    return -1;
+  }
+
+  ip->nlink++;
+  iupdate(ip);
+  iunlock(ip);
+
+  if((dp = nameiparent(new, name)) == 0)
+    goto bad;
+  ilock(dp);
+  if(dp->dev != ip->dev || dirlink(dp, name, ip->inum) < 0){
+    iunlockput(dp);
+    goto bad;
+  }
+  iunlockput(dp);
+  iput(ip);
+
+  commit_trans();
+
+  return 0;
+
+bad:
+  ilock(ip);
+  ip->nlink--;
+  iupdate(ip);
+  iunlockput(ip);
+  commit_trans();
+  return -1;
+}
+
+
+
+// Is the directory dp empty except for "." and ".." ?
+static int
+isdirempty(struct inode *dp)
+{
+  int off;
+  struct dirent de;
+
+  for(off=2*sizeof(de); off<dp->size; off+=sizeof(de)){
+    if(readi(dp, (char*)&de, off, sizeof(de)) != sizeof(de))
+      panic("isdirempty: readi");
+    if(de.inum != 0)
+      return 0;
+  }
+  return 1;
+}
+
+int
+sfs_unlinki(char *path)
+{
+  struct inode *ip, *dp;
+  struct dirent de;
+  char name[DIRSIZ];
+  uint off;
+
+  if(argstr(0, &path) < 0)
+    return -1;
+  if((dp = nameiparent(path, name)) == 0)
+    return -1;
+
+  begin_trans();
+
+  ilock(dp);
+
+  // Cannot unlink "." or "..".
+  if(namecmp(name, ".") == 0 || namecmp(name, "..") == 0)
+    goto bad;
+
+  if((ip = dirlookup(dp, name, &off)) == 0)
+    goto bad;
+  ilock(ip);
+
+  if(ip->nlink < 1)
+    panic("unlink: nlink < 1");
+  if(ip->type == T_DIR && !isdirempty(ip)){
+    iunlockput(ip);
+    goto bad;
+  }
+
+  memset(&de, 0, sizeof(de));
+  if(writei(dp, (char*)&de, off, sizeof(de)) != sizeof(de))
+    panic("unlink: writei");
+  if(ip->type == T_DIR){
+    dp->nlink--;
+    iupdate(dp);
+  }
+  iunlockput(dp);
+
+  ip->nlink--;
+  iupdate(ip);
+  iunlockput(ip);
+
+  commit_trans();
+
+  return 0;
+
+bad:
+  iunlockput(dp);
+  commit_trans();
+  return -1;
+}
+
+/*static*/ struct inode*
+create(char *path, short type, short major, short minor)
+{
+  uint off;
+  struct inode *ip, *dp;
+  char name[DIRSIZ];
+
+  if((dp = nameiparent(path, name)) == 0)
+    return 0;
+  ilock(dp);
+
+  if((ip = dirlookup(dp, name, &off)) != 0){
+    iunlockput(dp);
+    ilock(ip);
+    if(type == T_FILE && ip->type == T_FILE)
+      return ip;
+    iunlockput(ip);
+    return 0;
+  }
+
+  if((ip = ialloc(dp->dev, type)) == 0)
+    panic("create: ialloc");
+
+  ilock(ip);
+  ip->major = major;
+  ip->minor = minor;
+  ip->nlink = 1;
+  iupdate(ip);
+
+  if(type == T_DIR){  // Create . and .. entries.
+    dp->nlink++;  // for ".."
+    iupdate(dp);
+    // No ip->nlink++ for ".": avoid cyclic ref count.
+    if(dirlink(ip, ".", ip->inum) < 0 || dirlink(ip, "..", dp->inum) < 0)
+      panic("create dots");
+  }
+
+  if(dirlink(dp, name, ip->inum) < 0)
+    panic("create: dirlink");
+
+  iunlockput(dp);
+
+  return ip;
+}
+
+
+struct inode*
+sfs_createi_file(char *path)
+{
+  struct inode* ip;
+  begin_trans();
+  ip = create(path, T_FILE, 0, 0);
+  commit_trans();
+
+  iunlock(ip);
+
+  return ip;
+}
+
+struct inode*
+sfs_openi(char *path, int omode)
+{
+  struct inode* ip;
+  if((ip = namei(path)) == 0)
+    return 0;
+  ilock(ip);
+  if(ip->type == T_DIR && omode != O_RDONLY){
+    iunlockput(ip);
+    return 0;
+  }
+
+  iunlock(ip);
+
+  return ip;
+}
+
+
+int
+sfs_mkdiri(char *path)
+{
+  struct inode *ip;
+
+  begin_trans();
+  if((ip = create(path, T_DIR, 0, 0)) == 0){
+    commit_trans();
+    return -1;
+  }
+
+  iunlockput(ip);
+  commit_trans();
+  return 0;
+}
+
+int
+sfs_mknodi(char *path, int major, int minor)
+{
+  struct inode *ip;
+
+  begin_trans();
+  if((ip = create(path, T_DEV, major, minor)) == 0){
+    commit_trans();
+    return -1;
+  }
+
+  iunlockput(ip);
+  commit_trans();
+  return 0;
+}
+
+
+
+
+
+
 
 // Read the super block.
 void
@@ -172,6 +490,7 @@ static struct inode* iget(uint dev, uint inum);
 //PAGEBREAK!
 // Allocate a new inode with the given type on device dev.
 // A free inode has a type of zero.
+static
 struct inode*
 ialloc(uint dev, short type)
 {
@@ -198,6 +517,7 @@ ialloc(uint dev, short type)
 }
 
 // Copy a modified in-memory inode to disk.
+static
 void
 iupdate(struct inode *ip)
 {
@@ -502,6 +822,7 @@ namecmp(const char *s, const char *t)
 
 // Look for a directory entry in a directory.
 // If found, set *poff to byte offset of entry.
+static
 struct inode*
 dirlookup(struct inode *dp, char *name, uint *poff)
 {
@@ -529,6 +850,7 @@ dirlookup(struct inode *dp, char *name, uint *poff)
 }
 
 // Write a new directory entry (name, inum) into the directory dp.
+static
 int
 dirlink(struct inode *dp, char *name, uint inum)
 {

@@ -25,6 +25,7 @@ int             exec(char*, char**);
 
 // file.c
 struct file*    filealloc(void);
+struct file* fileopen(char *path, int omode);
 void            fileclose(struct file*);
 struct file*    filedup(struct file*);
 void            fileinit(void);
@@ -33,23 +34,24 @@ int             filestat(struct file*, struct stat*);
 int             filewrite(struct file*, char*, int n);
 
 // fs.c
+void sfs_closei(struct inode *ip);
+void sfs_stati(struct inode *ip, struct stat *st);
+int sfs_readi(struct inode *ip, char *addr, int off, int n);
+int sfs_writei(struct inode *ip, char *addr, int off, int n);
+int sfs_linki(char *new, char *old);
+int sfs_unlinki(char *path);
+struct inode* sfs_createi_file(char *path);
+struct inode* sfs_openi(char *path, int omode);
+int sfs_mkdiri(char *path);
+int sfs_mknodi(char *path, int major, int minor);
+
 void            readsb(int dev, struct superblock *sb);
-int             dirlink(struct inode*, char*, uint);
-struct inode*   dirlookup(struct inode*, char*, uint*);
-struct inode*   ialloc(uint, short);
-struct inode*   idup(struct inode*);
 void            iinit(void);
 void            ilock(struct inode*);
-void            iput(struct inode*);
 void            iunlock(struct inode*);
 void            iunlockput(struct inode*);
-void            iupdate(struct inode*);
-int             namecmp(const char*, const char*);
 struct inode*   namei(char*);
-struct inode*   nameiparent(char*, char*);
 int             readi(struct inode*, char*, uint, uint);
-void            stati(struct inode*, struct stat*);
-int             writei(struct inode*, char*, uint, uint);
 
 // ide.c
 void            ideinit(void);
