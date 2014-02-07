@@ -3,6 +3,7 @@ typedef unsigned short ushort;
 typedef unsigned char  uchar;
 typedef uint pde_t;
 
+#ifndef _STDINT_H
 typedef char int8_t;
 typedef short int16_t;
 typedef int int32_t;
@@ -41,3 +42,4 @@ typedef uint32_t uintptr_t;
 
 typedef int64_t intmax_t;
 typedef uint64_t uintmax_t;
+#endif
