@@ -604,6 +604,7 @@ skipelem(char *path, char *name)
 static struct inode*
 namex(char *path, int nameiparent, char *name)
 {
+  //FIXME: . & ..
   struct inode *ip, *next;
   char x_path[DIRSIZ];
 
@@ -613,7 +614,9 @@ namex(char *path, int nameiparent, char *name)
     int len = strlen(proc->cwd_path);
     safestrcpy(x_path, proc->cwd_path, sizeof(x_path));
     safestrcpy(x_path+len, path, sizeof(x_path)-len);
+    path = x_path;
   }
+
 
   while((path = skipelem(path, name)) != 0){
     ilock(ip);

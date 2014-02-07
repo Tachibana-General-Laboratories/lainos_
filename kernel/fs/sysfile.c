@@ -358,13 +358,30 @@ sys_mknod(void)
 int
 sys_chdir(void)
 {
+  //FIXME: . & ..
   char *path;
+  char x_path[DIRSIZ];
+  int len;
 
   if(argstr(0, &path) < 0)
     return -1;
 
+  if(*path != '/') {
+    len = strlen(proc->cwd_path);
+    safestrcpy(x_path, proc->cwd_path, sizeof(x_path));
+    safestrcpy(x_path+len, path, sizeof(x_path)-len);
+    path = x_path;
+  }
+
   //TODO: проверка реальности пути
   safestrcpy(proc->cwd_path, path, sizeof(path));
+  len = strlen(proc->cwd_path);
+  if(proc->cwd_path[len - 1] != '/'){
+    cprintf("add %s %d\n", proc->cwd_path, len);
+    proc->cwd_path[len] = '/';
+    proc->cwd_path[len+1] = 0;
+  }
+
   return 0;
 }
 

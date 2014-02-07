@@ -103,6 +103,8 @@ userinit(void)
 
   safestrcpy(p->name, "initcode", sizeof(p->name));
   //FIXME:safestrcpy(p->cwd_path, "/", sizeof(p->cwd_path)); XXX:p->cwd = namei("/");
+  p->cwd_path[0] = '/';
+  p->cwd_path[1] = 0;
 
   p->state = RUNNABLE;
 }
