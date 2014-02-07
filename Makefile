@@ -187,4 +187,4 @@ qemu-nox-gdb: fs.img xv6.img .gdbinit
 	@echo "*** Now run 'gdb'." 1>&2
 	$(QEMU) -nographic $(QEMUOPTS) -S $(QEMUGDB)
 
-.PHONY: dist-test dist
+.PHONY: dist-test dist kernel/kernelmemfs kernel/kernel
