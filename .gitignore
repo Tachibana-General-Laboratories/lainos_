@@ -34,4 +34,3 @@ kernel/kernelmemfs
 mkfs
 mkfs2
 .gdbinit
-fs
