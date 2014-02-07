@@ -605,11 +605,15 @@ static struct inode*
 namex(char *path, int nameiparent, char *name)
 {
   struct inode *ip, *next;
+  char x_path[DIRSIZ];
 
-  if(*path == '/')
-    ip = iget(ROOTDEV, ROOTINO);
-  else
-    ip = idup(proc->cwd);
+  ip = iget(ROOTDEV, ROOTINO);
+
+  if(*path != '/') {
+    int len = strlen(proc->cwd_path);
+    safestrcpy(x_path, proc->cwd_path, sizeof(x_path));
+    safestrcpy(x_path+len, path, sizeof(x_path)-len);
+  }
 
   while((path = skipelem(path, name)) != 0){
     ilock(ip);

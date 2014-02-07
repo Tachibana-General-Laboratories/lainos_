@@ -102,7 +102,7 @@ userinit(void)
   p->tf->eip = 0;  // beginning of initcode.S
 
   safestrcpy(p->name, "initcode", sizeof(p->name));
-  p->cwd = namei("/");
+  //FIXME:safestrcpy(p->cwd_path, "/", sizeof(p->cwd_path)); XXX:p->cwd = namei("/");
 
   p->state = RUNNABLE;
 }
@@ -220,7 +220,7 @@ fork(void)
   for(i = 0; i < NOFILE; i++)
     if(proc->ofile[i])
       np->ofile[i] = filedup(proc->ofile[i]);
-  np->cwd = idup(proc->cwd);
+  safestrcpy(np->cwd_path, proc->cwd_path, sizeof(np->cwd_path));
 
   // shared mem
   if (proc->shared) {
@@ -257,8 +257,7 @@ exit(void)
     }
   }
 
-  iput(proc->cwd);
-  proc->cwd = 0;
+  proc->cwd_path[0] = 0;
 
   acquire(&ptable.lock);
 

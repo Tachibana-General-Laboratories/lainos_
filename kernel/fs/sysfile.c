@@ -359,18 +359,12 @@ int
 sys_chdir(void)
 {
   char *path;
-  struct inode *ip;
 
-  if(argstr(0, &path) < 0 || (ip = namei(path)) == 0)
+  if(argstr(0, &path) < 0)
     return -1;
-  ilock(ip);
-  if(ip->type != T_DIR){
-    iunlockput(ip);
-    return -1;
-  }
-  iunlock(ip);
-  iput(proc->cwd);
-  proc->cwd = ip;
+
+  //TODO: проверка реальности пути
+  safestrcpy(proc->cwd_path, path, sizeof(path));
   return 0;
 }
 

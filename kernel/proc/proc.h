@@ -76,7 +76,7 @@ struct proc {
   void *chan;                  // If non-zero, sleeping on chan
   int killed;                  // If non-zero, have been killed
   struct file *ofile[NOFILE];  // Open files
-  struct inode *cwd;           // Current directory
+  char cwd_path[4096];           // Current directory
   struct shared *shared;       // Shared memory record (0 -> none)
   char name[16];               // Process name (debugging)
 };
