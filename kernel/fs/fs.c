@@ -46,6 +46,109 @@ static struct inode*   nameiparent(char*, char*);
 static void            stati(struct inode*, struct stat*);
 static int             writei(struct inode*, char*, uint, uint);
 
+uint32_t
+sfs_read(fs_node_t *node, uint32_t offset, uint32_t size, uint8_t *buffer)
+{
+  struct inode *ip;
+  ip = node->ip;
+
+  if(ip == 0)
+    panic("sfs_write FAIL ip");
+
+  if(ip->type == T_DIR)
+    panic("sfs_read IS NOT A T_FILE is a dir");
+
+  return sfs_readi(ip, (void*)buffer, offset, size);
+}
+uint32_t
+sfs_write(fs_node_t *node, uint32_t offset, uint32_t size, uint8_t *buffer)
+{
+  struct inode *ip;
+  ip = node->ip;
+
+  if(ip == 0)
+    panic("sfs_write FAIL ip");
+
+  if(ip->type == T_DIR)
+    panic("sfs_write IS NOT A T_FILE is a dir");
+
+  return sfs_writei(ip, (void*)buffer, offset, size);
+}
+
+struct dirent *
+sfs_readdir(fs_node_t *node, struct dirent *r_de, uint32_t index)
+{
+  if(!(node->type & FS_DIRECTORY))
+    panic("sfs_readdir IS NOT FS_DIRECTORY");
+
+  struct sfs_dirent de;
+  uint off = sizeof(de) * index;
+
+  if(readi(node->ip, (char*)&de, off, sizeof(de)) != sizeof(de))
+    panic("sfs_readdir DIRLINK READ FAIL");
+
+  if(de.inum == 0)
+    return -1;
+
+  r_de->d_name = de.inum;
+  safestrcpy(r_de->d_name, de.name, sizeof(char) * DIRSIZ);
+
+  return r_de;
+}
+
+
+/*
+fs_node_t *
+sfs_finddir(struct fs_node *node, char *name)
+{
+  fs_node_t *f;
+  struct dirent *d;
+  struct inode *ip;
+  uint32_t i;
+
+  while((d = sfs_readdir(node, i++)) != 0) {
+    if((strcmp(d->name, name, DIRSIZ)) == 0) {
+      //found
+      f = filealloc();
+
+      //ip = iget(ROOTDEV, d->inum);
+
+      //switch
+      //f->type =
+      kfree(d);
+      return f;
+    }
+    kfree(d);
+  }
+
+  return 0;
+}*/
+
+void
+sfs_root(fs_node_t *node)
+{
+  node->read = &sfs_read;
+  node->write = &sfs_write;
+}
+
+
+
+
+//typedef struct dirent *(readdir_type_t) (struct fs_node *, uint32_t index);
+//typedef struct fs_node *(finddir_type_t) (struct fs_node *, char *name);
+
+//uint32_t
+//sfs_write(struct fs_node *node, uint32_t offset, uint32_t size, uint8_t *buffer)
+//{
+  //return sfs_writei(node->ip, (void*)buffer, offset, size);
+//}
+
+
+
+
+
+
+
 void
 sfs_closei(struct inode *ip)
 {
@@ -160,7 +263,7 @@ static int
 isdirempty(struct inode *dp)
 {
   int off;
-  struct dirent de;
+  struct sfs_dirent de;
 
   for(off=2*sizeof(de); off<dp->size; off+=sizeof(de)){
     if(readi(dp, (char*)&de, off, sizeof(de)) != sizeof(de))
@@ -175,7 +278,7 @@ int
 sfs_unlinki(char *path)
 {
   struct inode *ip, *dp;
-  struct dirent de;
+  struct sfs_dirent de;
   char name[DIRSIZ];
   uint off;
 
@@ -226,7 +329,7 @@ bad:
   return -1;
 }
 
-/*static*/ struct inode*
+static struct inode*
 create(char *path, short type, short major, short minor)
 {
   uint off;
@@ -827,7 +930,7 @@ struct inode*
 dirlookup(struct inode *dp, char *name, uint *poff)
 {
   uint off, inum;
-  struct dirent de;
+  struct sfs_dirent de;
 
   if(dp->type != T_DIR)
     panic("dirlookup not DIR");
@@ -855,7 +958,7 @@ int
 dirlink(struct inode *dp, char *name, uint inum)
 {
   int off;
-  struct dirent de;
+  struct sfs_dirent de;
   struct inode *ip;
 
   // Check that name is not present.

@@ -1,3 +1,6 @@
+#ifndef TYPES_H
+#define TYPES_H
+
 typedef unsigned int   uint;
 typedef unsigned short ushort;
 typedef unsigned char  uchar;
@@ -42,4 +45,6 @@ typedef uint32_t uintptr_t;
 
 typedef int64_t intmax_t;
 typedef uint64_t uintmax_t;
+#endif
+
 #endif

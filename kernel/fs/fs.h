@@ -35,6 +35,24 @@ struct dinode {
   uint addrs[NDIRECT+1];   // Data block addresses
 };
 
+// in-memory copy of an inode
+struct inode {
+  uint dev;           // Device number
+  uint inum;          // Inode number
+  int ref;            // Reference count
+  int flags;          // I_BUSY, I_VALID
+
+  short type;         // copy of disk inode
+  short major;
+  short minor;
+  short nlink;
+  uint size;
+  uint addrs[NDIRECT+1];
+};
+#define I_BUSY 0x1
+#define I_VALID 0x2
+
+
 // Inodes per block.
 #define IPB           (BSIZE / sizeof(struct dinode))
 
@@ -50,8 +68,33 @@ struct dinode {
 // Directory is a file containing a sequence of dirent structures.
 #define DIRSIZ 14
 
-struct dirent {
+struct sfs_dirent {
   ushort inum;
   char name[DIRSIZ];
 };
+
+/*struct dirent {
+  ushort inum;
+  char name[DIRSIZ];
+};*/
+
+struct dirent
+{
+    uint32_t d_ino;           /* номер inode */
+    uint32_t d_off;           /* смещение на dirent */
+    uint16_t d_reclen;        /* длина d_name */
+    //char d_name [NAME_MAX+1];   /* имя файла (оканчивающееся нулем) */
+    char d_name [DIRSIZ+1];   /* имя файла (оканчивающееся нулем) */
+};
+
+// table mapping major device number to
+// device functions
+struct devsw {
+  int (*read)(struct inode*, char*, uint, uint);
+  int (*write)(struct inode*, char*, uint, uint);
+};
+
+extern struct devsw devsw[];
+
+#define CONSOLE 1
 

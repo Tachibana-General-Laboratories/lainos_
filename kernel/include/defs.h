@@ -1,6 +1,8 @@
 struct buf;
 struct context;
-struct file;
+//struct file;
+#include "file.h"
+//struct fs_node;
 struct inode;
 struct pipe;
 struct proc;
@@ -24,14 +26,14 @@ void            panic(char*) __attribute__((noreturn));
 int             exec(char*, char**);
 
 // file.c
-struct file*    filealloc(void);
-struct file* fileopen(char *path, int omode);
-void            fileclose(struct file*);
-struct file*    filedup(struct file*);
+fs_node_t*    filealloc(void);
+fs_node_t* fileopen(char *path, int omode);
+void            fileclose(fs_node_t*);
+fs_node_t*    filedup(fs_node_t*);
 void            fileinit(void);
-int             fileread(struct file*, char*, int n);
-int             filestat(struct file*, struct stat*);
-int             filewrite(struct file*, char*, int n);
+int             fileread(fs_node_t*, char*, int n);
+int             filestat(fs_node_t*, struct stat*);
+int             filewrite(fs_node_t*, char*, int n);
 
 // fs.c
 void sfs_closei(struct inode *ip);
@@ -97,7 +99,7 @@ void            picenable(int);
 void            picinit(void);
 
 // pipe.c
-int             pipealloc(struct file**, struct file**);
+int             pipealloc(struct fs_node**, struct fs_node**);
 void            pipeclose(struct pipe*, int);
 int             piperead(struct pipe*, char*, int);
 int             pipewrite(struct pipe*, char*, int);

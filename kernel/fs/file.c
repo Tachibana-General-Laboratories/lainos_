@@ -14,7 +14,7 @@
 struct devsw devsw[NDEV];
 struct {
   struct spinlock lock;
-  struct file file[NFILE];
+  fs_node_t file[NFILE];
 } ftable;
 
 void
@@ -24,14 +24,15 @@ fileinit(void)
 }
 
 // Allocate a file structure.
-struct file*
+fs_node_t*
 filealloc(void)
 {
-  struct file *f;
+  fs_node_t *f;
 
   acquire(&ftable.lock);
   for(f = ftable.file; f < ftable.file + NFILE; f++){
     if(f->ref == 0){
+      memset(f, 0, sizeof(fs_node_t));
       f->ref = 1;
       release(&ftable.lock);
       return f;
@@ -41,16 +42,16 @@ filealloc(void)
   return 0;
 }
 
-struct file*
+fs_node_t*
 fileopen(char *path, int omode)
 {
-  struct file *f;
+  fs_node_t *f;
 
   if((f = filealloc()) == 0)
     return 0;
 
   f->type = FD_INODE;
-  f->off = 0;
+  f->offset = 0;
   f->readable = !(omode & O_WRONLY);
   f->writable = (omode & O_WRONLY) || (omode & O_RDWR);
 
@@ -72,8 +73,8 @@ fileopen(char *path, int omode)
 }
 
 // Increment ref count for file f.
-struct file*
-filedup(struct file *f)
+fs_node_t*
+filedup(fs_node_t *f)
 {
   acquire(&ftable.lock);
   if(f->ref < 1)
@@ -85,9 +86,9 @@ filedup(struct file *f)
 
 // Close file f.  (Decrement ref count, close when reaches 0.)
 void
-fileclose(struct file *f)
+fileclose(fs_node_t *f)
 {
-  struct file ff;
+  fs_node_t ff;
 
   acquire(&ftable.lock);
   if(f->ref < 1)
@@ -100,7 +101,12 @@ fileclose(struct file *f)
   f->ref = 0;
   f->type = FD_NONE;
   release(&ftable.lock);
-  
+
+  if(ff.close) {
+    ff.close(&ff);
+    return;
+  }
+
   if(ff.type == FD_PIPE)
     pipeclose(ff.pipe, ff.writable);
   else if(ff.type == FD_INODE){
@@ -110,7 +116,7 @@ fileclose(struct file *f)
 
 // Get metadata about file f.
 int
-filestat(struct file *f, struct stat *st)
+filestat(fs_node_t *f, struct stat *st)
 {
   if(f->type == FD_INODE){
     sfs_stati(f->ip, st);
@@ -119,19 +125,35 @@ filestat(struct file *f, struct stat *st)
   return -1;
 }
 
+
+uint32_t
+sfs_read(fs_node_t *node, uint32_t offset, uint32_t size, uint8_t *buffer);
+
+uint32_t
+sfs_write(fs_node_t *node, uint32_t offset, uint32_t size, uint8_t *buffer);
+
 // Read from file f.
 int
-fileread(struct file *f, char *addr, int n)
+fileread(fs_node_t *f, char *addr, int n)
 {
   int r;
 
   if(f->readable == 0)
     return -1;
+
+  if(f->read) {
+    if((r = f->read(f, f->offset, n, (void*)addr) > 0))
+      f->offset += r;
+    return r;
+  }
+
   if(f->type == FD_PIPE)
     return piperead(f->pipe, addr, n);
   if(f->type == FD_INODE){
-    if((r = sfs_readi(f->ip, addr, f->off, n)) > 0)
-      f->off += r;
+    if((r = sfs_read(f, f->offset, n, (void*)addr)) > 0)
+      f->offset += r;
+    //if((r = sfs_readi(f->ip, addr, f->offset, n)) > 0)
+      //f->offset += r;
     return r;
   }
   panic("fileread");
@@ -139,18 +161,27 @@ fileread(struct file *f, char *addr, int n)
 
 // Write to file f.
 int
-filewrite(struct file *f, char *addr, int n)
+filewrite(fs_node_t *f, char *addr, int n)
 {
   int r;
 
   if(f->writable == 0)
     return -1;
+
+  if(f->write) {
+    if((r = f->write(f, f->offset, n, (void*)addr) > 0))
+      f->offset += r;
+    return r;
+  }
+
   if(f->type == FD_PIPE)
     return pipewrite(f->pipe, addr, n);
   if(f->type == FD_INODE){
-      if ((r = sfs_writei(f->ip, addr, f->off, n)) > 0)
-        f->off += r;
-      return r;
+    if((r = sfs_write(f, f->offset, n, (void*)addr)) > 0)
+      f->offset += r;
+    //if ((r = sfs_writei(f->ip, addr, f->offset, n)) > 0)
+      //f->offset += r;
+    return r;
   }
   panic("filewrite");
 }

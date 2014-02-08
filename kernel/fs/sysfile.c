@@ -17,10 +17,10 @@
 // Fetch the nth word-sized system call argument as a file descriptor
 // and return both the descriptor and the corresponding struct file.
 static int
-argfd(int n, int *pfd, struct file **pf)
+argfd(int n, int *pfd, fs_node_t **pf)
 {
   int fd;
-  struct file *f;
+  fs_node_t *f;
 
   if(argint(n, &fd) < 0)
     return -1;
@@ -36,7 +36,7 @@ argfd(int n, int *pfd, struct file **pf)
 // Allocate a file descriptor for the given file.
 // Takes over file reference from caller on success.
 static int
-fdalloc(struct file *f)
+fdalloc(fs_node_t *f)
 {
   int fd;
 
@@ -52,7 +52,7 @@ fdalloc(struct file *f)
 int
 sys_dup(void)
 {
-  struct file *f;
+  fs_node_t *f;
   int fd;
   
   if(argfd(0, 0, &f) < 0)
@@ -66,7 +66,7 @@ sys_dup(void)
 int
 sys_read(void)
 {
-  struct file *f;
+  fs_node_t *f;
   int n;
   char *p;
 
@@ -78,7 +78,7 @@ sys_read(void)
 int
 sys_write(void)
 {
-  struct file *f;
+  fs_node_t *f;
   int n;
   char *p;
 
@@ -91,7 +91,7 @@ int
 sys_close(void)
 {
   int fd;
-  struct file *f;
+  fs_node_t *f;
   
   if(argfd(0, &fd, &f) < 0)
     return -1;
@@ -103,7 +103,7 @@ sys_close(void)
 int
 sys_fstat(void)
 {
-  struct file *f;
+  fs_node_t *f;
   struct stat *st;
   
   if(argfd(0, 0, &f) < 0 || argptr(1, (void*)&st, sizeof(*st)) < 0)
@@ -139,7 +139,7 @@ sys_open(void)
 {
   char *path;
   int fd, omode;
-  struct file *f;
+  fs_node_t *f;
 
   if(argstr(0, &path) < 0 || argint(1, &omode) < 0)
     return -1;
@@ -155,7 +155,6 @@ sys_open(void)
   }
   return fd;
 }
-
 
 int
 sys_mkdir(void)
@@ -245,7 +244,7 @@ int
 sys_pipe(void)
 {
   int *fd;
-  struct file *rf, *wf;
+  fs_node_t *rf, *wf;
   int fd0, fd1;
 
   if(argptr(0, (void*)&fd, 2*sizeof(fd[0])) < 0)

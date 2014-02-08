@@ -8,10 +8,10 @@
 #include <assert.h>
 #include <dirent.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #define stat xv6_stat  // avoid clash with host struct stat
 #define dirent xv6_dirent  // avoid clash with host struct stat
-#define _STDINT_H
 #include "include/types.h"
 #include "fs/fs.h"
 #include "fs/stat.h"
@@ -99,7 +99,7 @@ add_dir(DIR *cur_dir, int cur_inode, int parent_inode) {
 	int r;
 	int child_inode;
 	int cur_fd, child_fd;
-	struct xv6_dirent de;
+	struct sfs_dirent de;
 	struct dinode din;
 	struct dirent dir_buf;
 	struct dirent *entry;
@@ -229,7 +229,7 @@ main(int argc, char *argv[]) {
 	}
 
 	assert((512 % sizeof(struct dinode)) == 0);
-	assert((512 % sizeof(struct xv6_dirent)) == 0);
+	assert((512 % sizeof(struct sfs_dirent)) == 0);
 
 	fsfd = open(argv[1], O_RDWR | O_CREAT | O_TRUNC, 0666);
 
