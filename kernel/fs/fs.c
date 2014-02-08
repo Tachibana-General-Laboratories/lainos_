@@ -75,25 +75,28 @@ sfs_write(fs_node_t *node, uint32_t offset, uint32_t size, uint8_t *buffer)
   return sfs_writei(ip, (void*)buffer, offset, size);
 }
 
-struct dirent *
-sfs_readdir(fs_node_t *node, struct dirent *r_de, uint32_t index)
+uint32_t
+sfs_readdir(fs_node_t *node, struct dirent *r_de, uint32_t offset)
 {
   if(!(node->type & FS_DIRECTORY))
     panic("sfs_readdir IS NOT FS_DIRECTORY");
 
   struct sfs_dirent de;
-  uint off = sizeof(de) * index;
 
-  if(readi(node->ip, (char*)&de, off, sizeof(de)) != sizeof(de))
-    panic("sfs_readdir DIRLINK READ FAIL");
+  if(readi(node->ip, (char*)&de, offset, sizeof(de)) != sizeof(de)){
+    //panic("sfs_readdir DIRLINK READ FAIL");
+    return 0;
+  }
 
-  if(de.inum == 0)
-    return -1;
+  //if(de.inum == 0)
+    //return 0;
 
-  r_de->d_name = de.inum;
+  r_de->d_ino = de.inum;
+  r_de->d_off = offset;
+  r_de->d_reclen = strlen(de.name);
   safestrcpy(r_de->d_name, de.name, sizeof(char) * DIRSIZ);
 
-  return r_de;
+  return sizeof(de);
 }
 
 

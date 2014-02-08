@@ -24,6 +24,7 @@ int sleep(int);
 int uptime(void);
 int shared(int);
 int shared_attach(int);
+int readdir(int, void*);
 
 // ulib.c
 int stat(char*, struct stat*);

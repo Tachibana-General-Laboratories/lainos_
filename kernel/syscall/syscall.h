@@ -23,3 +23,5 @@
 
 #define SYS_shared 22
 #define SYS_shared_attach 23
+
+#define SYS_readdir 24

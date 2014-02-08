@@ -69,10 +69,15 @@ sys_read(void)
   fs_node_t *f;
   int n;
   char *p;
+  int r;
 
   if(argfd(0, 0, &f) < 0 || argint(2, &n) < 0 || argptr(1, &p, n) < 0)
     return -1;
-  return fileread(f, p, n);
+
+  if((r = fileread(f, p, n)) > 0)
+      f->offset += r;
+
+  return r;
 }
 
 int
@@ -81,10 +86,15 @@ sys_write(void)
   fs_node_t *f;
   int n;
   char *p;
+  int r;
 
   if(argfd(0, 0, &f) < 0 || argint(2, &n) < 0 || argptr(1, &p, n) < 0)
     return -1;
-  return filewrite(f, p, n);
+
+  if((r = filewrite(f, p, n)) > 0)
+      f->offset += r;
+
+  return r;
 }
 
 int
@@ -155,6 +165,28 @@ sys_open(void)
   }
   return fd;
 }
+
+
+int
+sys_readdir(void)
+{
+  fs_node_t *f;
+  struct dirent *d;
+  int r;
+
+  if(argfd(0, 0, &f) < 0 ||
+     argptr(1, (void*)&d, sizeof(struct dirent))){
+    return -1;
+  }
+
+  if((r = sfs_readdir(f, d, f->offset)) == 0){
+    return -1;
+  }
+  f->offset += r;
+
+  return 0;
+}
+
 
 int
 sys_mkdir(void)

@@ -47,6 +47,8 @@ struct inode* sfs_openi(char *path, int omode);
 int sfs_mkdiri(char *path);
 int sfs_mknodi(char *path, int major, int minor);
 
+uint32_t sfs_readdir(fs_node_t *node, struct dirent *r_de, uint32_t offset);
+
 void            readsb(int dev, struct superblock *sb);
 void            iinit(void);
 void            ilock(struct inode*);

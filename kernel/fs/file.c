@@ -136,25 +136,19 @@ sfs_write(fs_node_t *node, uint32_t offset, uint32_t size, uint8_t *buffer);
 int
 fileread(fs_node_t *f, char *addr, int n)
 {
-  int r;
-
   if(f->readable == 0)
     return -1;
 
   if(f->read) {
-    if((r = f->read(f, f->offset, n, (void*)addr) > 0))
-      f->offset += r;
-    return r;
+    return f->read(f, f->offset, n, (void*)addr);
   }
 
   if(f->type == FD_PIPE)
     return piperead(f->pipe, addr, n);
   if(f->type == FD_INODE){
-    if((r = sfs_read(f, f->offset, n, (void*)addr)) > 0)
-      f->offset += r;
+    return sfs_read(f, f->offset, n, (void*)addr);
     //if((r = sfs_readi(f->ip, addr, f->offset, n)) > 0)
       //f->offset += r;
-    return r;
   }
   panic("fileread");
 }
@@ -163,25 +157,19 @@ fileread(fs_node_t *f, char *addr, int n)
 int
 filewrite(fs_node_t *f, char *addr, int n)
 {
-  int r;
-
   if(f->writable == 0)
     return -1;
 
   if(f->write) {
-    if((r = f->write(f, f->offset, n, (void*)addr) > 0))
-      f->offset += r;
-    return r;
+    return f->write(f, f->offset, n, (void*)addr);
   }
 
   if(f->type == FD_PIPE)
     return pipewrite(f->pipe, addr, n);
   if(f->type == FD_INODE){
-    if((r = sfs_write(f, f->offset, n, (void*)addr)) > 0)
-      f->offset += r;
+    return sfs_write(f, f->offset, n, (void*)addr);
     //if ((r = sfs_writei(f->ip, addr, f->offset, n)) > 0)
       //f->offset += r;
-    return r;
   }
   panic("filewrite");
 }
