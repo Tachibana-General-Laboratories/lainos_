@@ -74,7 +74,7 @@ sys_read(void)
   if(argfd(0, 0, &f) < 0 || argint(2, &n) < 0 || argptr(1, &p, n) < 0)
     return -1;
 
-  if((r = fileread(f, p, n)) > 0)
+  if((r = vfs_read(f, f->offset, n, (void*)p)) > 0)
       f->offset += r;
 
   return r;
@@ -91,7 +91,7 @@ sys_write(void)
   if(argfd(0, 0, &f) < 0 || argint(2, &n) < 0 || argptr(1, &p, n) < 0)
     return -1;
 
-  if((r = filewrite(f, p, n)) > 0)
+  if((r = vfs_write(f, f->offset, n, (void*)p)) > 0)
       f->offset += r;
 
   return r;
@@ -125,7 +125,7 @@ sys_fstat(void)
 int
 sys_link(void)
 {
-  char *new, *old;
+  char *old, *new;
 
   if(argstr(0, &old) < 0 || argstr(1, &new) < 0)
     return -1;

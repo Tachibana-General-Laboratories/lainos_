@@ -26,14 +26,18 @@ void            panic(char*) __attribute__((noreturn));
 int             exec(char*, char**);
 
 // file.c
+
+int32_t vfs_read(fs_node_t *node, uint32_t offset, uint32_t size, uint8_t *buffer);
+int32_t vfs_write(fs_node_t *node, uint32_t offset, uint32_t size, uint8_t *buffer);
+
 fs_node_t*    filealloc(void);
 fs_node_t* fileopen(char *path, int omode);
 void            fileclose(fs_node_t*);
 fs_node_t*    filedup(fs_node_t*);
 void            fileinit(void);
-int             fileread(fs_node_t*, char*, int n);
+//int             fileread(fs_node_t*, char*, int n);
 int             filestat(fs_node_t*, struct stat*);
-int             filewrite(fs_node_t*, char*, int n);
+//int             filewrite(fs_node_t*, char*, int n);
 
 // fs.c
 void sfs_closei(struct inode *ip);

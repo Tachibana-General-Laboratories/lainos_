@@ -42,6 +42,38 @@ filealloc(void)
   return 0;
 }
 
+static fs_node_t* _root;
+
+extern void sfs_root(fs_node_t *node);
+
+fs_node_t*
+vfs_kopen(char *path)
+{
+  if(!_root) {
+    cprintf("alloc _root\n");
+    _root = filealloc();
+    if(!_root)
+      panic("fileopen FAIL alloc _root");
+    cprintf("init _root\n");
+    sfs_root(_root);
+    struct dirent d;
+
+    cprintf("open _root\n");
+    _root->open(_root, 0);
+    cprintf("readdir _root\n");
+    _root->readdir(_root, &d, 0);
+    cprintf("IN ROOT: %s\n", d.d_name);
+    cprintf("close _root\n");
+    //_root->close(_root);
+    fileclose(_root);
+  }
+
+  //struct fs_node_t* node;
+  //_root
+
+  return 0;
+}
+
 fs_node_t*
 fileopen(char *path, int omode)
 {
@@ -49,6 +81,25 @@ fileopen(char *path, int omode)
 
   if((f = filealloc()) == 0)
     return 0;
+
+  if(!_root){
+    cprintf("alloc _root\n");
+    _root = filealloc();
+    if(!_root)
+      panic("fileopen FAIL alloc _root");
+    cprintf("init _root\n");
+    sfs_root(_root);
+    struct dirent d;
+
+    cprintf("open _root\n");
+    _root->open(_root, 0);
+    cprintf("readdir _root\n");
+    _root->readdir(_root, &d, 0);
+    cprintf("IN ROOT: %s\n", d.d_name);
+    cprintf("close _root\n");
+    //_root->close(_root);
+    fileclose(_root);
+  }
 
   f->type = FD_INODE;
   f->offset = 0;
@@ -133,20 +184,20 @@ uint32_t
 sfs_write(fs_node_t *node, uint32_t offset, uint32_t size, uint8_t *buffer);
 
 // Read from file f.
-int
-fileread(fs_node_t *f, char *addr, int n)
+int32_t
+vfs_read(fs_node_t *node, uint32_t offset, uint32_t size, uint8_t *buffer)
 {
-  if(f->readable == 0)
-    return -1;
+  if(node->readable == 0)
+    return 0;
 
-  if(f->read) {
-    return f->read(f, f->offset, n, (void*)addr);
+  if(node->read) {
+    return node->read(node, offset, size, buffer);
   }
 
-  if(f->type == FD_PIPE)
-    return piperead(f->pipe, addr, n);
-  if(f->type == FD_INODE){
-    return sfs_read(f, f->offset, n, (void*)addr);
+  if(node->type == FD_PIPE)
+    return piperead(node->pipe, (void*)buffer, size);
+  if(node->type == FD_INODE){
+    return sfs_read(node, offset, size, buffer);
     //if((r = sfs_readi(f->ip, addr, f->offset, n)) > 0)
       //f->offset += r;
   }
@@ -154,20 +205,20 @@ fileread(fs_node_t *f, char *addr, int n)
 }
 
 // Write to file f.
-int
-filewrite(fs_node_t *f, char *addr, int n)
+int32_t
+vfs_write(fs_node_t *node, uint32_t offset, uint32_t size, uint8_t *buffer)
 {
-  if(f->writable == 0)
+  if(node->writable == 0)
     return -1;
 
-  if(f->write) {
-    return f->write(f, f->offset, n, (void*)addr);
+  if(node->write) {
+    return node->write(node, offset, size, buffer);
   }
 
-  if(f->type == FD_PIPE)
-    return pipewrite(f->pipe, addr, n);
-  if(f->type == FD_INODE){
-    return sfs_write(f, f->offset, n, (void*)addr);
+  if(node->type == FD_PIPE)
+    return pipewrite(node->pipe, (void*)buffer, size);
+  if(node->type == FD_INODE){
+    return sfs_write(node, offset, size, buffer);
     //if ((r = sfs_writei(f->ip, addr, f->offset, n)) > 0)
       //f->offset += r;
   }

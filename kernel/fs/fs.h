@@ -78,15 +78,6 @@ struct sfs_dirent {
   char name[DIRSIZ];
 };*/
 
-struct dirent
-{
-    uint32_t d_ino;           /* номер inode */
-    uint32_t d_off;           /* смещение на dirent */
-    uint16_t d_reclen;        /* длина d_name */
-    //char d_name [NAME_MAX+1];   /* имя файла (оканчивающееся нулем) */
-    char d_name [DIRSIZ+1];   /* имя файла (оканчивающееся нулем) */
-};
-
 // table mapping major device number to
 // device functions
 struct devsw {

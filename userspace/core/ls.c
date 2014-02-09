@@ -2,6 +2,7 @@
 #include "stat.h"
 #include "user.h"
 #include "fs.h"
+#include "file.h"
 
 char*
 fmtname(char *path)

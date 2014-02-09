@@ -1,23 +1,6 @@
 #ifndef FILE_H
 #define FILE_H
 
-struct fs_node;
-
-typedef uint32_t (read_type_t) (struct fs_node *, uint32_t offset, uint32_t size, uint8_t *buffer);
-typedef uint32_t (write_type_t) (struct fs_node *, uint32_t offset, uint32_t size, uint8_t *buffer);
-typedef void (open_type_t) (struct fs_node *, uint32_t flags);
-typedef void (close_type_t) (struct fs_node *);
-typedef struct dirent *(readdir_type_t) (struct fs_node *, uint32_t index);
-typedef struct fs_node *(finddir_type_t) (struct fs_node *, char *name);
-
-typedef void (mknod_type_t) (struct fs_node *, char *name, uint16_t type, uint16_t permission, uint32_t dev);
-typedef void (unlink_type_t) (struct fs_node *, char *name);
-
-typedef int (ioctl_type_t) (struct fs_node *, int request, void * argp);
-typedef int (get_size_type_t) (struct fs_node *);
-typedef int (chmod_type_t) (struct fs_node *, int mode);
-
-
 #define FS_UNDEFINED   0x00
 #define FS_FILE        0x01
 #define FS_DIRECTORY   0x02
@@ -27,6 +10,34 @@ typedef int (chmod_type_t) (struct fs_node *, int mode);
 #define FS_SYMLINK     0x20
 #define FS_MOUNTPOINT  0x40
 #define FS_SOCKET      0x80
+
+#define MAXNAMLEN 255
+
+struct dirent
+{
+    uint32_t d_ino;           /* номер inode */
+    uint32_t d_off;           /* смещение на dirent */
+    uint16_t d_reclen;        /* длина d_name */
+    //char d_name [NAME_MAX+1];   /* имя файла (оканчивающееся нулем) */
+    char d_name [MAXNAMLEN+1];   /* имя файла (оканчивающееся нулем) */
+};
+
+struct fs_node;
+
+typedef int32_t (read_type_t) (struct fs_node *, uint32_t offset, uint32_t size, uint8_t *buffer);
+typedef int32_t (write_type_t) (struct fs_node *, uint32_t offset, uint32_t size, uint8_t *buffer);
+
+typedef int (open_type_t) (struct fs_node *, uint32_t flags);
+typedef void (close_type_t) (struct fs_node *);
+typedef uint32_t (readdir_type_t) (struct fs_node *, struct dirent *, uint32_t offset);
+typedef struct fs_node *(finddir_type_t) (struct fs_node *, char *name);
+
+typedef void (mknod_type_t) (struct fs_node *, char *name, uint16_t type, uint16_t permission, uint32_t dev);
+typedef void (unlink_type_t) (struct fs_node *, char *name);
+
+typedef int (ioctl_type_t) (struct fs_node *, int request, void * argp);
+typedef int (get_size_type_t) (struct fs_node *);
+typedef int (chmod_type_t) (struct fs_node *, int mode);
 
 
 typedef struct fs_node {
@@ -39,6 +50,8 @@ typedef struct fs_node {
   struct pipe *pipe;
   //struct inode *ip;
   void *ip;
+
+  uint32_t inode; /* номер inode */
 
   read_type_t *read;
   write_type_t *write;

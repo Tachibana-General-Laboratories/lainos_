@@ -24,6 +24,8 @@
 #define min(a, b) ((a) < (b) ? (a) : (b))
 static void itrunc(struct inode*);
 
+static struct inode* iget(uint dev, uint inum);
+
 
 
 void            readsb(int dev, struct superblock *sb);
@@ -46,21 +48,34 @@ static struct inode*   nameiparent(char*, char*);
 static void            stati(struct inode*, struct stat*);
 static int             writei(struct inode*, char*, uint, uint);
 
+
 uint32_t
+sfs_getsize(fs_node_t *node)
+{
+  struct inode *ip;
+  ip = node->ip;
+
+  if(ip == 0)
+    panic("sfs_getsize FAIL ip");
+
+  return ip->size;
+}
+
+int32_t
 sfs_read(fs_node_t *node, uint32_t offset, uint32_t size, uint8_t *buffer)
 {
   struct inode *ip;
   ip = node->ip;
 
   if(ip == 0)
-    panic("sfs_write FAIL ip");
+    panic("sfs_read FAIL ip");
 
   if(ip->type == T_DIR)
     panic("sfs_read IS NOT A T_FILE is a dir");
 
   return sfs_readi(ip, (void*)buffer, offset, size);
 }
-uint32_t
+int32_t
 sfs_write(fs_node_t *node, uint32_t offset, uint32_t size, uint8_t *buffer)
 {
   struct inode *ip;
@@ -78,18 +93,23 @@ sfs_write(fs_node_t *node, uint32_t offset, uint32_t size, uint8_t *buffer)
 uint32_t
 sfs_readdir(fs_node_t *node, struct dirent *r_de, uint32_t offset)
 {
+  struct inode *ip;
+  ip = node->ip;
+
+  if(ip == 0)
+    panic("sfs_readdir FAIL ip");
+
   if(!(node->type & FS_DIRECTORY))
     panic("sfs_readdir IS NOT FS_DIRECTORY");
 
   struct sfs_dirent de;
 
-  if(readi(node->ip, (char*)&de, offset, sizeof(de)) != sizeof(de)){
+  ilock(ip);
+  if(readi(ip, (char*)&de, offset, sizeof(de)) != sizeof(de)){
     //panic("sfs_readdir DIRLINK READ FAIL");
     return 0;
   }
-
-  //if(de.inum == 0)
-    //return 0;
+  iunlock(ip);
 
   r_de->d_ino = de.inum;
   r_de->d_off = offset;
@@ -99,39 +119,99 @@ sfs_readdir(fs_node_t *node, struct dirent *r_de, uint32_t offset)
   return sizeof(de);
 }
 
-
-/*
 fs_node_t *
 sfs_finddir(struct fs_node *node, char *name)
 {
   fs_node_t *f;
-  struct dirent *d;
-  struct inode *ip;
-  uint32_t i;
+  struct dirent d;
+  //struct inode *ip;
+  uint32_t off;
+  uint32_t r;
 
-  while((d = sfs_readdir(node, i++)) != 0) {
-    if((strcmp(d->name, name, DIRSIZ)) == 0) {
+  for(; (r = sfs_readdir(node, &d, off)) != 0; off += r) {
+    if((strncmp(d.d_name, name, DIRSIZ)) == 0) {
       //found
       f = filealloc();
+      f->inode = d.d_ino;
 
       //ip = iget(ROOTDEV, d->inum);
 
       //switch
       //f->type =
-      kfree(d);
       return f;
     }
-    kfree(d);
   }
 
   return 0;
-}*/
+}
+
+
+int sfs_open(struct fs_node *node, uint32_t flags)
+{
+  int ino = node->inode;
+
+  if(ino == 0)
+    panic("sfs_open FAIL ino");
+
+  struct inode *ip;
+  ip = iget(ROOTDEV, ino);
+
+  //notfound!
+  if(ip == 0)
+    panic("sfs_open FAIL ip");
+
+  ilock(ip);
+
+  switch(ip->type){
+    case T_FILE:
+      node->type = FS_FILE;
+    break;
+    case T_DIR:
+      node->type = FS_DIRECTORY;
+      if(flags != O_RDONLY){
+        iunlockput(ip);
+        return -1;
+      }
+    break;
+    case T_DEV:
+      node->type = FS_BLOCKDEVICE;
+    break;
+    default:
+      iunlockput(ip);
+      return -1;
+  }
+
+  node->ip = ip;
+
+  iunlock(ip);
+
+  return 0;
+}
+void sfs_close(struct fs_node *node)
+{
+  struct inode *ip;
+  ip = node->ip;
+
+  if(ip == 0)
+    panic("sfs_close FAIL ip");
+
+  sfs_closei(ip);
+}
 
 void
 sfs_root(fs_node_t *node)
 {
+  node->inode = ROOTINO;
+  node->ip = iget(ROOTDEV, ROOTINO);
+  iput(node->ip);
+  node->open = &sfs_open;
+  node->close = &sfs_close;
   node->read = &sfs_read;
+  node->readdir = &sfs_readdir;
+  //node->finddir = &sfs_finddir;
   node->write = &sfs_write;
+
+  node->type = FS_DIRECTORY | FS_MOUNTPOINT;
 }
 
 
@@ -213,13 +293,11 @@ sfs_writei(struct inode *ip, char *addr, int off, int n)
 }
 
 int
-sfs_linki(char *new, char *old)
+sfs_linki(char *old, char *new)
 {
   char name[DIRSIZ];
   struct inode *dp, *ip;
 
-  if(argstr(0, &old) < 0 || argstr(1, &new) < 0)
-    return -1;
   if((ip = namei(old)) == 0)
     return -1;
 
